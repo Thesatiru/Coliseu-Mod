@@ -1,17 +1,11 @@
 package satiru.coliseumod
 
-import net.minecraft.entity.ExperienceOrbEntity
-import net.minecraft.entity.ItemEntity
-import net.minecraft.registry.RegistryKey
-import net.minecraft.registry.RegistryKeys
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.text.ClickEvent
 import net.minecraft.text.MutableText
 import net.minecraft.text.Text
 import net.minecraft.util.Formatting
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.Box
 import java.util.UUID
 import kotlin.math.ceil
 import kotlin.random.Random
@@ -26,18 +20,6 @@ class TournamentManager(private val config: ColiseuConfig) {
         var inicioMs = 0L
         var tentativas = 0
         var resolvida = false
-    }
-
-    /** Pokémon copiados de uma luta que já acabou e precisam sumir da arena. */
-    private class Descarte(val arena: Int, val clones: Set<UUID>, val ateMs: Long)
-
-    companion object {
-        /** Raio (em blocos) ao redor das posições de luta onde itens caídos são apagados. */
-        private const val RAIO_LIMPEZA = 24.0
-        /** Raio ao redor das posições de luta onde os Pokémon copiados são removidos. */
-        private const val RAIO_POKEMON = 16.0
-        /** Por quanto tempo a limpeza continua depois que uma luta termina. */
-        private const val SOBRA_LIMPEZA_MS = 10_000L
     }
 
     var estado = Estado.IDLE
@@ -68,10 +50,6 @@ class TournamentManager(private val config: ColiseuConfig) {
     private var proximaLutaEmMs = 0L
     private var arenaTerminaEmMs = 0L
 
-    /** Arenas onde itens caídos devem ser apagados: índice da arena -> até quando (ms). */
-    private val limpezaAte = mutableMapOf<Int, Long>()
-    private val descartes = mutableListOf<Descarte>()
-
     // ---------- ciclo de vida ----------
 
     fun iniciar(server: MinecraftServer) {
@@ -80,10 +58,8 @@ class TournamentManager(private val config: ColiseuConfig) {
         ColiseuMod.LOGGER.info("Coliseu: first queue opens in ${config.intervaloMinutos} min")
     }
 
-    /** Chamado todo tick. A limpeza roda a cada tick; o resto só 1x por segundo. */
+    /** Chamado todo tick; só trabalha 1x por segundo. */
     fun tick(server: MinecraftServer) {
-        limparDrops(server)
-
         if (server.ticks % 20 != 0) return
         val agora = System.currentTimeMillis()
 
@@ -145,72 +121,6 @@ class TournamentManager(private val config: ColiseuConfig) {
             val arena = arenaLivre() ?: break
             prepararLuta(server, arena)
         }
-    }
-
-    // ---------- limpeza de drops e de Pokémon copiados ----------
-
-    /**
-     * Roda a cada tick:
-     *  - apaga itens e orbes de experiência caídos ao redor das arenas em uso (os Pokémon copiados
-     *    que desmaiam soltam o item que seguram, como se fossem selvagens);
-     *  - remove do mundo as entidades dos Pokémon copiados de lutas que já terminaram.
-     */
-    private fun limparDrops(server: MinecraftServer) {
-        if (limpezaAte.isEmpty() && descartes.isEmpty()) return
-        val agora = System.currentTimeMillis()
-
-        val iteradorItens = limpezaAte.entries.iterator()
-        while (iteradorItens.hasNext()) {
-            val entrada = iteradorItens.next()
-            if (entrada.value < agora) {
-                iteradorItens.remove()
-                continue
-            }
-            val arena = config.arenas.getOrNull(entrada.key) ?: continue
-            arena.pos1?.let { apagarDrops(server, it) }
-            arena.pos2?.let { apagarDrops(server, it) }
-        }
-
-        val iteradorPokemon = descartes.iterator()
-        while (iteradorPokemon.hasNext()) {
-            val descarte = iteradorPokemon.next()
-            if (descarte.ateMs < agora) {
-                iteradorPokemon.remove()
-                continue
-            }
-            removerPokemons(server, descarte)
-        }
-    }
-
-    private fun apagarDrops(server: MinecraftServer, pos: PosicaoConfig) {
-        val id = Identifier.tryParse(pos.dimensao) ?: return
-        val mundo = server.getWorld(RegistryKey.of(RegistryKeys.WORLD, id)) ?: return
-        val r = RAIO_LIMPEZA
-        val caixa = Box(pos.x - r, pos.y - r, pos.z - r, pos.x + r, pos.y + r, pos.z + r)
-        mundo.getEntitiesByClass(ItemEntity::class.java, caixa) { true }.forEach { it.discard() }
-        mundo.getEntitiesByClass(ExperienceOrbEntity::class.java, caixa) { true }.forEach { it.discard() }
-    }
-
-    private fun removerPokemons(server: MinecraftServer, descarte: Descarte) {
-        val arena = config.arenas.getOrNull(descarte.arena) ?: return
-        // se já começou outra luta nesta arena, só remove as cópias antigas (nunca as da luta atual)
-        val arenaOcupada = lutas.any { it.arena == descarte.arena }
-        listOfNotNull(arena.pos1, arena.pos2).forEach { pos ->
-            val id = Identifier.tryParse(pos.dimensao) ?: return@forEach
-            val mundo = server.getWorld(RegistryKey.of(RegistryKeys.WORLD, id)) ?: return@forEach
-            val r = RAIO_POKEMON
-            val caixa = Box(pos.x - r, pos.y - r, pos.z - r, pos.x + r, pos.y + r, pos.z + r)
-            BatalhaCobblemon.removerPokemonsDaLuta(mundo, caixa, descarte.clones, incluirSemDono = !arenaOcupada)
-        }
-    }
-
-    /** Depois que a luta acaba, remove já os Pokémon copiados e continua conferindo por um tempo. */
-    private fun agendarDescarte(server: MinecraftServer, l: Luta, agora: Long) {
-        val clones = BatalhaCobblemon.retirarClones(l.a) + BatalhaCobblemon.retirarClones(l.b)
-        if (clones.isEmpty()) return
-        val descarte = Descarte(l.arena, clones, agora + SOBRA_LIMPEZA_MS)
-        descartes.add(descarte)
-        removerPokemons(server, descarte)
     }
 
     // ---------- ações dos jogadores ----------
@@ -542,9 +452,6 @@ class TournamentManager(private val config: ColiseuConfig) {
         Teleporte.levar(server, pa, pos1)
         Teleporte.levar(server, pb, pos2)
 
-        // enquanto a arena estiver em uso, itens caídos ali são apagados
-        limpezaAte[arena] = Long.MAX_VALUE
-
         val agora = System.currentTimeMillis()
         val luta = Luta(a, b, arena, agora + config.contagemLutaSegundos * 1000L)
         lutas.add(luta)
@@ -574,7 +481,7 @@ class TournamentManager(private val config: ColiseuConfig) {
             return
         }
 
-        if (BatalhaCobblemon.iniciarBatalha(pa, pb, config.nivelBatalha)) {
+        if (BatalhaCobblemon.iniciarBatalha(pa, pb)) {
             val agora = System.currentTimeMillis()
             l.comecou = true
             l.inicioMs = agora
@@ -604,11 +511,6 @@ class TournamentManager(private val config: ColiseuConfig) {
         proximaLutaEmMs = agora + config.pausaEntreLutasSegundos * 1000L
         arenaTerminaEmMs = agora + config.tempoMaximoSegundos * 1000L
 
-        // os drops do último Pokémon podem aparecer depois do fim da luta: limpa mais um pouco
-        limpezaAte[l.arena] = agora + SOBRA_LIMPEZA_MS
-        // e os Pokémon copiados que ficaram na arena somem agora
-        agendarDescarte(server, l, agora)
-
         aviso(server, Msg.t("fight.won", "winner" to nome(vencedor), "loser" to nome(perdedor)), Formatting.GREEN)
 
         server.playerManager.getPlayer(vencedor)?.let { p ->
@@ -618,12 +520,13 @@ class TournamentManager(private val config: ColiseuConfig) {
         eliminar(server, perdedor)
     }
 
-    /** Tira o jogador do torneio e o devolve ao lugar de origem. */
+    /** Tira o jogador do torneio, cura o time dele e o devolve ao lugar de origem. */
     private fun eliminar(server: MinecraftServer, uuid: UUID) {
         if (!vivos.remove(uuid)) return
         eliminados.add(uuid)
         filaLutas.removeAll { it.first == uuid || it.second == uuid }
         server.playerManager.getPlayer(uuid)?.let { p ->
+            BatalhaCobblemon.curar(p)
             retornar(server, p)
             p.sendMessage(Text.literal(Msg.t("fight.eliminated")).formatted(Formatting.YELLOW), false)
         }
@@ -671,20 +574,18 @@ class TournamentManager(private val config: ColiseuConfig) {
 
     // ---------- encerramento ----------
 
-    /** Devolve todo mundo para onde estava e volta ao estado de espera. */
+    /** Cura e devolve todo mundo para onde estava, e volta ao estado de espera. */
     private fun encerrar(server: MinecraftServer, motivo: String) {
         aviso(server, motivo, Formatting.YELLOW)
 
-        val agora = System.currentTimeMillis()
-        lutas.toList().forEach {
-            BatalhaCobblemon.encerrarBatalhaDe(it.a)
-            limpezaAte[it.arena] = agora + SOBRA_LIMPEZA_MS
-            agendarDescarte(server, it, agora)
-        }
+        lutas.toList().forEach { BatalhaCobblemon.encerrarBatalhaDe(it.a) }
         lutas.clear()
 
         vivos.toList().forEach { uuid ->
-            server.playerManager.getPlayer(uuid)?.let { retornar(server, it) }
+            server.playerManager.getPlayer(uuid)?.let {
+                BatalhaCobblemon.curar(it)
+                retornar(server, it)
+            }
         }
         resetar()
     }
@@ -720,7 +621,7 @@ class TournamentManager(private val config: ColiseuConfig) {
 
     private fun nome(uuid: UUID): String = nomes[uuid] ?: "?"
 
-    /** Texto da regra de lendários + nível máximo (se houver) + nível de batalha. */
+    /** Texto da regra de lendários + nível máximo (se houver). */
     private fun textoRegra(limite: Int): String {
         val lendarios = when {
             limite < 0 -> Msg.t("rule.unlimited")
@@ -729,8 +630,7 @@ class TournamentManager(private val config: ColiseuConfig) {
             else -> Msg.t("rule.many", "n" to limite)
         }
         val nivel = if (config.nivelMaximo < 100) Msg.t("rule.max_level", "n" to config.nivelMaximo) else ""
-        val escala = if (config.nivelBatalha > 0) Msg.t("rule.scaled", "n" to config.nivelBatalha) else ""
-        return lendarios + nivel + escala
+        return lendarios + nivel
     }
 
     private fun anunciar(server: MinecraftServer, segundosRestantes: Int) {

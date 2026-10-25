@@ -47,12 +47,8 @@ data class ColiseuConfig(
     var contagemLutaSegundos: Int = 0,
 
     // regras de time
+    /** Times com algum Pokémon acima deste nível não entram. 100 = sem limite. */
     var nivelMaximo: Int = 100,
-    /**
-     * Nível em que TODOS os Pokémon lutam (1 a 100). 0 = desligado, cada um luta no nível real.
-     * Só vale durante a luta: os Pokémon reais não são alterados.
-     */
-    var nivelBatalha: Int = 100,
     /**
      * Regras possíveis de lendários. A cada torneio uma é sorteada.
      * -1 = tudo liberado | 0 = nenhum lendário | 1 = no máximo 1 | 3 = no máximo 3 ...
@@ -83,7 +79,6 @@ data class ColiseuConfig(
         pausaEntreLutasSegundos = outra.pausaEntreLutasSegundos
         contagemLutaSegundos = outra.contagemLutaSegundos
         nivelMaximo = outra.nivelMaximo
-        nivelBatalha = outra.nivelBatalha
         opcoesLimitados = outra.opcoesLimitados
         labelsLimitados = outra.labelsLimitados
         lobby = outra.lobby
@@ -103,7 +98,6 @@ data class ColiseuConfig(
         pausaEntreLutasSegundos = pausaEntreLutasSegundos.coerceAtLeast(1)
         contagemLutaSegundos = contagemLutaSegundos.coerceIn(0, 30)
         nivelMaximo = nivelMaximo.coerceIn(1, 100)
-        nivelBatalha = nivelBatalha.coerceIn(0, 100)
         if (opcoesLimitados.isEmpty()) opcoesLimitados = listOf(-1)
 
         // migração: posLutador1/2 (Etapa 3) -> arena 1
