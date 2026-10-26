@@ -2,16 +2,17 @@
 	"schemaVersion": 1,
 	"id": "coliseumod",
 	"version": "${version}",
-	"name": "ColiseuMod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Colosseum for cobblemon",
+	"description": "Server-side automatic Cobblemon tournaments: timed queues, random rules, parallel arenas and loot pool rewards.",
 	"authors": [
-		"Me!"
+		"Thesatiru"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/Thesatiru/Colosseum-Mod",
+		"sources": "https://github.com/Thesatiru/Colosseum-Mod",
+		"issues": "https://github.com/Thesatiru/Colosseum-Mod/issues"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/coliseumod/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -22,9 +23,6 @@
 			}
 		]
 	},
-	"mixins": [
-		"coliseumod.mixins.json"
-	],
 	"depends": {
 		"cobblemon": "*",
 		"fabricloader": ">=0.16.0",
