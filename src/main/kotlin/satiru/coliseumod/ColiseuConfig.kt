@@ -62,6 +62,13 @@ data class ColiseuConfig(
     @field:SerializedName("maxLevel", alternate = ["nivelMaximo"])
     var nivelMaximo: Int = 100,
     /**
+     * Nível em que todos lutam, como a opção "Nível 50 / 100" do desafio do Cobblemon.
+     * 0 = cada Pokémon luta no próprio nível. O Cobblemon usa cópias na batalha:
+     * o time real do jogador não muda de nível.
+     */
+    @field:SerializedName("battleLevel", alternate = ["nivelBatalha"])
+    var nivelBatalha: Int = 0,
+    /**
      * Regras possíveis de lendários. A cada torneio uma é sorteada.
      * -1 = tudo liberado | 0 = nenhum lendário | 1 = no máximo 1 | 3 = no máximo 3 ...
      */
@@ -93,6 +100,7 @@ data class ColiseuConfig(
         pausaEntreLutasSegundos = outra.pausaEntreLutasSegundos
         contagemLutaSegundos = outra.contagemLutaSegundos
         nivelMaximo = outra.nivelMaximo
+        nivelBatalha = outra.nivelBatalha
         opcoesLimitados = outra.opcoesLimitados
         labelsLimitados = outra.labelsLimitados
         lobby = outra.lobby
@@ -112,6 +120,7 @@ data class ColiseuConfig(
         pausaEntreLutasSegundos = pausaEntreLutasSegundos.coerceAtLeast(1)
         contagemLutaSegundos = contagemLutaSegundos.coerceIn(0, 30)
         nivelMaximo = nivelMaximo.coerceIn(1, 100)
+        nivelBatalha = if (nivelBatalha <= 0) 0 else nivelBatalha.coerceAtMost(100)
         if (opcoesLimitados.isEmpty()) opcoesLimitados = listOf(-1)
 
         // migração: posLutador1/2 (Etapa 3) -> arena 1
@@ -147,7 +156,7 @@ data class ColiseuConfig(
         private val CHAVES_ANTIGAS = listOf(
             "idioma", "intervaloMinutos", "filaSegundos", "minJogadores", "maxJogadores", "avisosEmSegundos",
             "tempoMaximoSegundos", "tempoBatalhaSegundos", "pausaEntreLutasSegundos", "contagemLutaSegundos",
-            "nivelMaximo", "opcoesLimitados", "labelsLimitados", "dimensao", "posLutador1", "posLutador2"
+            "nivelMaximo", "nivelBatalha", "opcoesLimitados", "labelsLimitados", "dimensao", "posLutador1", "posLutador2"
         )
 
         /** Lê o arquivo. Retorna null se o JSON estiver quebrado. Cria o arquivo se não existir. */

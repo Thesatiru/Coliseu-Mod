@@ -12,7 +12,7 @@ weighted loot pool.
 
 - **Automatic events**: a queue opens on a timer, with chat announcements, a countdown and a clickable join button.
 - **Random rule each tournament**: legendary limit drawn from a configurable list (for example anything goes / max 1 / max 3), plus an optional maximum level.
-- **Players fight with their own teams and levels.** Teams are healed before every fight and when a player leaves the event.
+- **Players fight with their own teams.** Optionally, everyone battles at a fixed level (for example 50 or 100) using Cobblemon's built-in level adjustment, without changing anyone's real Pokémon. Teams are healed before every fight and when a player leaves the event.
 - **Single-elimination bracket** with byes for odd player counts, forfeits on disconnect or fleeing, and a time limit per fight.
 - **Several arenas at once**: add as many arenas as you want; fights of a round run in parallel.
 - **Safe return**: each player's original position is saved to disk and restored after the event, even after a crash or a disconnect.
@@ -114,6 +114,7 @@ these nodes are used. Without it, operators (level 2) are admins and everyone ca
 | `pauseBetweenFightsSeconds` | 5 | Pause before the next fight starts |
 | `fightCountdownSeconds` | 0 | Seconds between teleporting and starting a fight (0 = instant) |
 | `maxLevel` | 100 | Teams with a Pokémon above this level are rejected (100 = no limit) |
+| `battleLevel` | 0 | Everyone battles at this level, like Cobblemon's own Level 50 / Level 100 challenge option (for example `50` or `100`). The players' real Pokémon keep their levels. `0` = real levels. When set, `maxLevel` is ignored |
 | `legendaryLimitOptions` | `[-1, 1, 3]` | Legendary rules to draw from: -1 = unlimited, 0 = none, n = at most n |
 | `legendaryLabels` | legendary, mythical, ultra_beast, paradox | Cobblemon labels that count as "legendary" |
 | `lobby`, `arenas` | set in game | Positions (use the admin commands) |

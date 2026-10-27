@@ -481,7 +481,7 @@ class TournamentManager(private val config: ColiseuConfig) {
             return
         }
 
-        if (BatalhaCobblemon.iniciarBatalha(pa, pb)) {
+        if (BatalhaCobblemon.iniciarBatalha(pa, pb, config.nivelBatalha)) {
             val agora = System.currentTimeMillis()
             l.comecou = true
             l.inicioMs = agora
@@ -621,7 +621,7 @@ class TournamentManager(private val config: ColiseuConfig) {
 
     private fun nome(uuid: UUID): String = nomes[uuid] ?: "?"
 
-    /** Texto da regra de lendários + nível máximo (se houver). */
+    /** Texto da regra de lendários + nível de batalha ou nível máximo (se houver). */
     private fun textoRegra(limite: Int): String {
         val lendarios = when {
             limite < 0 -> Msg.t("rule.unlimited")
@@ -629,7 +629,11 @@ class TournamentManager(private val config: ColiseuConfig) {
             limite == 1 -> Msg.t("rule.one")
             else -> Msg.t("rule.many", "n" to limite)
         }
-        val nivel = if (config.nivelMaximo < 100) Msg.t("rule.max_level", "n" to config.nivelMaximo) else ""
+        val nivel = when {
+            config.nivelBatalha > 0 -> Msg.t("rule.scaled", "n" to config.nivelBatalha)
+            config.nivelMaximo < 100 -> Msg.t("rule.max_level", "n" to config.nivelMaximo)
+            else -> ""
+        }
         return lendarios + nivel
     }
 

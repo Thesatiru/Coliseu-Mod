@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.api.Priority
 import com.cobblemon.mod.common.api.events.CobblemonEvents
 import com.cobblemon.mod.common.battles.BattleBuilder
+import com.cobblemon.mod.common.battles.BattleFormat
 import com.cobblemon.mod.common.battles.BattleRegistry
 import net.minecraft.server.network.ServerPlayerEntity
 import java.util.UUID
@@ -25,7 +26,8 @@ object BatalhaCobblemon {
         val time = pokemons(player)
         if (time.isEmpty()) return Msg.t("team.empty")
 
-        val acima = time.firstOrNull { it.level > config.nivelMaximo }
+        // com nível de batalha fixo, o nível real não importa: o limite de nível não vale
+        val acima = if (config.nivelBatalha > 0) null else time.firstOrNull { it.level > config.nivelMaximo }
         if (acima != null) {
             return Msg.t("team.level", "species" to acima.species.name, "max" to config.nivelMaximo)
         }
@@ -56,10 +58,20 @@ object BatalhaCobblemon {
     fun emBatalha(player: ServerPlayerEntity): Boolean =
         BattleRegistry.getBattleByParticipatingPlayer(player) != null
 
-    /** Inicia a batalha 1v1 com as equipes reais. Retorna true se os dois jogadores ficaram em batalha. */
-    fun iniciarBatalha(a: ServerPlayerEntity, b: ServerPlayerEntity): Boolean {
+    /**
+     * Inicia a batalha 1v1. Retorna true se os dois jogadores ficaram em batalha.
+     * [nivel] > 0: todos lutam nesse nível, pelo mesmo ajuste de nível do desafio do Cobblemon
+     * (BattleFormat.adjustLevel). O Cobblemon monta cópias dos times só para a batalha,
+     * então os Pokémon reais não mudam. [nivel] = 0: lutam com os times e níveis reais.
+     */
+    fun iniciarBatalha(a: ServerPlayerEntity, b: ServerPlayerEntity, nivel: Int): Boolean {
         return try {
-            BattleBuilder.pvp1v1(a, b)
+            if (nivel > 0) {
+                val formato = BattleFormat.GEN_9_SINGLES.copy(adjustLevel = nivel)
+                BattleBuilder.pvp1v1(a, b, null, null, formato)
+            } else {
+                BattleBuilder.pvp1v1(a, b)
+            }
             emBatalha(a) && emBatalha(b)
         } catch (e: Exception) {
             ColiseuMod.LOGGER.error("Erro ao iniciar batalha ${a.name.string} x ${b.name.string}", e)
