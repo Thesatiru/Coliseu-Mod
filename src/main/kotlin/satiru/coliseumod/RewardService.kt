@@ -1,8 +1,8 @@
 package satiru.coliseumod
 
 import com.google.gson.GsonBuilder
+import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
-import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.registry.Registries
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerPlayerEntity
@@ -16,9 +16,13 @@ import kotlin.random.Random
 
 /** Um prêmio já sorteado e pronto para ser entregue. */
 data class PremioSorteado(
+    @field:SerializedName("name", alternate = ["nome"])
     var nome: String = "",
+    @field:SerializedName("highlight", alternate = ["destaque"])
     var destaque: Boolean = false,
+    @field:SerializedName("commands", alternate = ["comandos"])
     var comandos: List<String> = emptyList(),
+    @field:SerializedName("label", alternate = ["rotulo"])
     var rotulo: String = ""
 )
 
@@ -29,8 +33,7 @@ data class PremioSorteado(
 class RewardService {
 
     private val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
-    private val caminhoPendentes =
-        FabricLoader.getInstance().configDir.resolve("coliseu_premios_pendentes.json")
+    private val caminhoPendentes = Arquivos.premiosPendentes
 
     private var loot: LootConfig = LootConfig.tentarCarregar() ?: LootConfig()
     private val pendentes = LinkedHashMap<String, MutableList<PremioSorteado>>()
@@ -45,7 +48,7 @@ class RewardService {
 
     // ---------- configuração ----------
 
-    /** Relê coliseu_loot.json. Retorna false se estiver com erro (mantém o anterior). */
+    /** Relê colosseum_loot.json. Retorna false se estiver com erro (mantém o anterior). */
     fun recarregar(): Boolean {
         val nova = LootConfig.tentarCarregar() ?: return false
         loot = nova
@@ -97,7 +100,7 @@ class RewardService {
 
     /**
      * Itens que podem sair no prêmio [numero] (1 = primeiro da lista), para o admin conferir.
-     * Retorna null se o prêmio não existe ou não usa itemAleatorio.
+     * Retorna null se o prêmio não existe ou não usa randomItem (itemAleatorio).
      */
     fun itensDoPremio(numero: Int): List<String>? {
         val f = loot.premios.getOrNull(numero - 1)?.itemAleatorio ?: return null
@@ -138,12 +141,12 @@ class RewardService {
             try {
                 Regex(it)
             } catch (e: Exception) {
-                ColiseuMod.LOGGER.warn("Coliseu: invalid regex in itemAleatorio: $it")
+                ColiseuMod.LOGGER.warn("Colosseum: invalid regex in randomItem: $it")
                 return null
             }
         }
         if (f.filtros.isEmpty() && regex == null) {
-            ColiseuMod.LOGGER.warn("Coliseu: itemAleatorio without filters or regex (ignored).")
+            ColiseuMod.LOGGER.warn("Colosseum: randomItem without include filters or regex (ignored).")
             return null
         }
         return Registries.ITEM.ids
@@ -301,7 +304,7 @@ class RewardService {
                 if (lido != null) pendentes.putAll(lido)
             }
         } catch (e: Exception) {
-            ColiseuMod.LOGGER.error("Erro ao ler coliseu_premios_pendentes.json", e)
+            ColiseuMod.LOGGER.error("Error reading colosseum_pending_rewards.json", e)
         }
     }
 
@@ -309,7 +312,7 @@ class RewardService {
         try {
             Files.writeString(caminhoPendentes, gson.toJson(pendentes))
         } catch (e: Exception) {
-            ColiseuMod.LOGGER.error("Erro ao salvar coliseu_premios_pendentes.json", e)
+            ColiseuMod.LOGGER.error("Error saving colosseum_pending_rewards.json", e)
         }
     }
 }

@@ -2,19 +2,18 @@ package satiru.coliseumod
 
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import net.fabricmc.loader.api.FabricLoader
 import java.nio.file.Files
 import java.util.UUID
 
 /**
  * Guarda de onde cada jogador veio antes de ser levado ao coliseu.
- * É salvo em disco (config/coliseu_retornos.json), então se o servidor cair
+ * É salvo em disco (config/colosseum_returns.json), então se o servidor cair
  * ou o jogador desconectar dentro da arena, ele ainda volta para casa ao entrar de novo.
  */
 class RetornoStore {
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
-    private val caminho = FabricLoader.getInstance().configDir.resolve("coliseu_retornos.json")
+    private val caminho = Arquivos.retornos
     private val mapa = LinkedHashMap<String, PosicaoConfig>()
 
     init {
@@ -27,7 +26,7 @@ class RetornoStore {
                 if (lido != null) mapa.putAll(lido)
             }
         } catch (e: Exception) {
-            ColiseuMod.LOGGER.error("Erro ao ler coliseu_retornos.json", e)
+            ColiseuMod.LOGGER.error("Error reading colosseum_returns.json", e)
         }
     }
 
@@ -48,7 +47,7 @@ class RetornoStore {
         try {
             Files.writeString(caminho, gson.toJson(mapa))
         } catch (e: Exception) {
-            ColiseuMod.LOGGER.error("Erro ao salvar coliseu_retornos.json", e)
+            ColiseuMod.LOGGER.error("Error saving colosseum_returns.json", e)
         }
     }
 }

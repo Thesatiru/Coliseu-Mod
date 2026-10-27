@@ -1,11 +1,12 @@
 package satiru.coliseumod
 
 import com.google.gson.GsonBuilder
-import net.fabricmc.loader.api.FabricLoader
+import com.google.gson.annotations.SerializedName
 import java.nio.file.Files
 
 /** Uma posição no mundo (dimensão + coordenadas + direção do olhar). */
 data class PosicaoConfig(
+    @field:SerializedName("dimension", alternate = ["dimensao"])
     var dimensao: String = "minecraft:overworld",
     var x: Double = 0.0,
     var y: Double = 100.0,
@@ -23,38 +24,51 @@ data class ArenaConfig(
 }
 
 /**
- * Configuração salva em config/coliseu.json.
+ * Configuração salva em config/colosseum.json (antes: coliseu.json, com chaves em português).
  * Lobby e arenas são definidos no jogo (setlobby e arena <n> pos1|pos2).
  */
 data class ColiseuConfig(
-    /** Idioma das mensagens: "en_us", "pt_br" ou o código de um arquivo em config/coliseu_lang/. */
+    /** Idioma das mensagens: um código embutido (en_us, pt_br, es_es, ...) ou um arquivo em config/colosseum_lang/. */
+    @field:SerializedName("language", alternate = ["idioma"])
     var idioma: String = "en_us",
 
     // fila e agendamento
+    @field:SerializedName("intervalMinutes", alternate = ["intervaloMinutos"])
     var intervaloMinutos: Int = 60,
+    @field:SerializedName("queueSeconds", alternate = ["filaSegundos"])
     var filaSegundos: Int = 60,
+    @field:SerializedName("minPlayers", alternate = ["minJogadores"])
     var minJogadores: Int = 2,
+    @field:SerializedName("maxPlayers", alternate = ["maxJogadores"])
     var maxJogadores: Int = 8,
+    @field:SerializedName("announceAtSeconds", alternate = ["avisosEmSegundos"])
     var avisosEmSegundos: List<Int> = listOf(60, 30, 10),
 
     // tempos do torneio
     /** Tempo máximo sem nenhum progresso (luta começando/terminando) antes de encerrar tudo. */
+    @field:SerializedName("stallTimeoutSeconds", alternate = ["tempoMaximoSegundos"])
     var tempoMaximoSegundos: Int = 600,
     /** Duração máxima de uma luta. Passou disso, o vencedor é sorteado. */
+    @field:SerializedName("battleTimeoutSeconds", alternate = ["tempoBatalhaSegundos"])
     var tempoBatalhaSegundos: Int = 480,
+    @field:SerializedName("pauseBetweenFightsSeconds", alternate = ["pausaEntreLutasSegundos"])
     var pausaEntreLutasSegundos: Int = 5,
     /** Segundos entre o teleporte e o início da luta. 0 = a luta começa na hora. */
+    @field:SerializedName("fightCountdownSeconds", alternate = ["contagemLutaSegundos"])
     var contagemLutaSegundos: Int = 0,
 
     // regras de time
     /** Times com algum Pokémon acima deste nível não entram. 100 = sem limite. */
+    @field:SerializedName("maxLevel", alternate = ["nivelMaximo"])
     var nivelMaximo: Int = 100,
     /**
      * Regras possíveis de lendários. A cada torneio uma é sorteada.
      * -1 = tudo liberado | 0 = nenhum lendário | 1 = no máximo 1 | 3 = no máximo 3 ...
      */
+    @field:SerializedName("legendaryLimitOptions", alternate = ["opcoesLimitados"])
     var opcoesLimitados: List<Int> = listOf(-1, 1, 3),
     /** Labels do Cobblemon que contam como "lendário". */
+    @field:SerializedName("legendaryLabels", alternate = ["labelsLimitados"])
     var labelsLimitados: List<String> = listOf("legendary", "mythical", "ultra_beast", "paradox"),
 
     // posições (definidas pelos comandos de admin)
@@ -120,33 +134,42 @@ data class ColiseuConfig(
         try {
             Files.writeString(caminho(), gson.toJson(this))
         } catch (e: Exception) {
-            ColiseuMod.LOGGER.error("Não foi possível salvar coliseu.json", e)
+            ColiseuMod.LOGGER.error("Could not save colosseum.json", e)
         }
     }
 
     companion object {
         private val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
 
-        private fun caminho() = FabricLoader.getInstance().configDir.resolve("coliseu.json")
+        private fun caminho() = Arquivos.config
+
+        /** Chaves usadas até a 0.1.0. Se o arquivo tiver alguma, ele é regravado com as chaves novas. */
+        private val CHAVES_ANTIGAS = listOf(
+            "idioma", "intervaloMinutos", "filaSegundos", "minJogadores", "maxJogadores", "avisosEmSegundos",
+            "tempoMaximoSegundos", "tempoBatalhaSegundos", "pausaEntreLutasSegundos", "contagemLutaSegundos",
+            "nivelMaximo", "opcoesLimitados", "labelsLimitados", "dimensao", "posLutador1", "posLutador2"
+        )
 
         /** Lê o arquivo. Retorna null se o JSON estiver quebrado. Cria o arquivo se não existir. */
         fun tentarCarregar(): ColiseuConfig? {
             val arquivo = caminho()
             return try {
                 if (Files.exists(arquivo)) {
-                    val lida = Files.newBufferedReader(arquivo).use {
-                        gson.fromJson(it, ColiseuConfig::class.java)
-                    } ?: return null
-                    val tinhaFormatoAntigo = lida.posLutador1 != null || lida.posLutador2 != null
+                    val texto = Files.readString(arquivo)
+                    val lida = gson.fromJson(texto, ColiseuConfig::class.java) ?: return null
+                    val tinhaFormatoAntigo = Arquivos.temChavesAntigas(texto, CHAVES_ANTIGAS)
                     lida.validar()
-                    // grava já no formato novo, para as posições antigas não se perderem
-                    if (tinhaFormatoAntigo) Files.writeString(arquivo, gson.toJson(lida))
+                    // grava já no formato novo (chaves em inglês, arenas no lugar de posLutador1/2)
+                    if (tinhaFormatoAntigo) {
+                        Files.writeString(arquivo, gson.toJson(lida))
+                        ColiseuMod.LOGGER.info("Colosseum: colosseum.json converted to the new key names")
+                    }
                     lida
                 } else {
                     ColiseuConfig().also { Files.writeString(arquivo, gson.toJson(it)) }
                 }
             } catch (e: Exception) {
-                ColiseuMod.LOGGER.error("Erro ao ler coliseu.json", e)
+                ColiseuMod.LOGGER.error("Error reading colosseum.json", e)
                 null
             }
         }

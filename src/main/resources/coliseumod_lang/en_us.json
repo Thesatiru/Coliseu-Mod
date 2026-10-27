@@ -103,7 +103,7 @@
   "cmd.lobby_set": "Lobby set at {x} {y} {z} ({dim}).",
   "cmd.arena_set": "Arena {n}, {side} set at {x} {y} {z} ({dim}).",
   "cmd.reloaded": "Configuration, loot and language files reloaded.",
-  "cmd.reload_failed": "Error reading coliseu.json or coliseu_loot.json (invalid JSON?). Nothing was changed. Check the log.",
+  "cmd.reload_failed": "Error reading colosseum.json or colosseum_loot.json (invalid JSON?). Nothing was changed. Check the log.",
   "cmd.hold_item": "Hold an item in your hand.",
   "cmd.itemid": "ID: {id}  |  command: give {player} {id} 1",
   "cmd.itemid_hint": "Item with extra data (e.g. a TM for a specific move)? Use /data get entity @s SelectedItem",

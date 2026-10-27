@@ -18,7 +18,7 @@ weighted loot pool.
 - **Safe return**: each player's original position is saved to disk and restored after the event, even after a crash or a disconnect.
 - **Loot pool**: weighted rewards per placement, run as server commands, with chat announcements and delivery on next login for offline winners.
 - **Random item rewards** by ID filter or regex (for example "a random TM" without listing every TM).
-- **Translations**: English and Brazilian Portuguese built in; add your own language with a JSON file.
+- **14 languages built in**: English, Portuguese (Brazil), Spanish, French, German, Italian, Polish, Russian, Ukrainian, Turkish, Chinese (Simplified and Traditional), Japanese and Korean. Add or tweak any language with a JSON file.
 - **Permissions**: LuckPerms-compatible nodes (optional).
 - **Live reload**: change config, loot and language without restarting.
 
@@ -99,64 +99,80 @@ these nodes are used. Without it, operators (level 2) are admins and everyone ca
 
 ## Configuration
 
-`config/coliseu.json` (created on first start; use `/colosseum admin reload` after editing):
+`config/colosseum.json` (created on first start; use `/colosseum admin reload` after editing):
 
 | Key | Default | Meaning |
 |---|---|---|
-| `idioma` | `en_us` | Language: `en_us`, `pt_br`, or a file in `config/coliseu_lang/` |
-| `intervaloMinutos` | 60 | Minutes between automatic queues |
-| `filaSegundos` | 60 | How long the queue stays open |
-| `minJogadores` | 2 | Minimum players to start (at least 2) |
-| `maxJogadores` | 8 | Maximum players in the queue |
-| `avisosEmSegundos` | `[60, 30, 10]` | When to repeat the countdown in chat |
-| `tempoMaximoSegundos` | 600 | The tournament ends if nothing progresses for this long |
-| `tempoBatalhaSegundos` | 480 | Maximum length of one fight; after that the winner is picked at random |
-| `pausaEntreLutasSegundos` | 5 | Pause before the next fight starts |
-| `contagemLutaSegundos` | 0 | Seconds between teleporting and starting a fight (0 = instant) |
-| `nivelMaximo` | 100 | Teams with a Pokémon above this level are rejected (100 = no limit) |
-| `opcoesLimitados` | `[-1, 1, 3]` | Legendary rules to draw from: -1 = unlimited, 0 = none, n = at most n |
-| `labelsLimitados` | legendary, mythical, ultra_beast, paradox | Cobblemon labels that count as "legendary" |
+| `language` | `en_us` | Language code (see [Languages](#languages)) |
+| `intervalMinutes` | 60 | Minutes between automatic queues |
+| `queueSeconds` | 60 | How long the queue stays open |
+| `minPlayers` | 2 | Minimum players to start (at least 2) |
+| `maxPlayers` | 8 | Maximum players in the queue |
+| `announceAtSeconds` | `[60, 30, 10]` | When to repeat the countdown in chat |
+| `stallTimeoutSeconds` | 600 | The tournament ends if nothing progresses for this long |
+| `battleTimeoutSeconds` | 480 | Maximum length of one fight; after that the winner is picked at random |
+| `pauseBetweenFightsSeconds` | 5 | Pause before the next fight starts |
+| `fightCountdownSeconds` | 0 | Seconds between teleporting and starting a fight (0 = instant) |
+| `maxLevel` | 100 | Teams with a Pokémon above this level are rejected (100 = no limit) |
+| `legendaryLimitOptions` | `[-1, 1, 3]` | Legendary rules to draw from: -1 = unlimited, 0 = none, n = at most n |
+| `legendaryLabels` | legendary, mythical, ultra_beast, paradox | Cobblemon labels that count as "legendary" |
 | `lobby`, `arenas` | set in game | Positions (use the admin commands) |
 
-> The JSON keys are currently in Portuguese and will be renamed in a future release (with automatic migration).
+> **Upgrading from 0.1.0:** the old files (`coliseu.json`, `coliseu_loot.json`, `coliseu_lang/`...) are renamed and converted to the new English keys automatically on the first start. Nothing is lost.
 
 ### Loot pool
 
-`config/coliseu_loot.json`:
+`config/colosseum_loot.json`:
 
 ```json
 {
-  "sorteiosCampeao": 1,
-  "sorteiosVice": 1,
-  "sorteiosTerceiro": 1,
-  "sorteiosParticipacao": 0,
-  "premios": [
+  "championRolls": 1,
+  "runnerUpRolls": 1,
+  "thirdPlaceRolls": 1,
+  "participationRolls": 0,
+  "rewards": [
     {
-      "nome": "15x Rare Candy",
-      "peso": 50,
-      "opcoes": [ { "comandos": ["give {player} cobblemon:rare_candy 15"] } ]
+      "name": "15x Rare Candy",
+      "weight": 50,
+      "options": [ { "commands": ["give {player} cobblemon:rare_candy 15"] } ]
     },
     {
-      "nome": "Random TM",
-      "peso": 25,
-      "itemAleatorio": { "filtros": ["some_mod:tm_"], "excluir": [], "quantidade": 1 }
+      "name": "Random TM",
+      "weight": 25,
+      "randomItem": { "include": ["some_mod:tm_"], "exclude": [], "amount": 1 }
     }
   ]
 }
 ```
 
-- `sorteios*`: how many rolls each placement gets (0 = nothing).
-- `peso`: weight in the draw. If all weights add up to 100, the weight is the percentage.
-- `opcoes`: one is picked at random; each runs its `comandos` as the console. `{player}` is the winner's name.
-- `itemAleatorio`: picks a random item whose ID contains all `filtros`, contains none of `excluir`, and matches `regex` (optional).
-- `destaque`: `true` shows the announcement in bold gold with stars.
+- `*Rolls`: how many rolls each placement gets (0 = nothing).
+- `weight`: weight in the draw. If all weights add up to 100, the weight is the percentage.
+- `options`: one is picked at random; each runs its `commands` as the console. `{player}` is the winner's name.
+- `randomItem`: picks a random item whose ID contains all `include` texts, contains none of `exclude`, and matches `regex` (optional).
+- `highlight`: `true` shows the announcement in bold gold with stars.
+- `note`: a reminder for yourself; the mod ignores it.
 - A reward with no way to be delivered is left out of the draw and admins are warned (see `/colosseum admin rewards`).
 
 ### Languages
 
-Built in: `en_us` and `pt_br`. To translate, copy `coliseumod_lang/en_us.json` from the jar to
-`config/coliseu_lang/<code>.json`, translate the values, and set `"idioma": "<code>"`.
-You only need to include the keys you want to change; missing keys fall back to the built-in text.
+Set `"language"` in `config/colosseum.json` to one of the built-in codes:
+
+| Code | Language | Code | Language |
+|---|---|---|---|
+| `en_us` | English | `ru_ru` | Русский |
+| `pt_br` | Português (Brasil) | `uk_ua` | Українська |
+| `es_es` | Español | `tr_tr` | Türkçe |
+| `fr_fr` | Français | `zh_cn` | 简体中文 |
+| `de_de` | Deutsch | `zh_tw` | 繁體中文 |
+| `it_it` | Italiano | `ja_jp` | 日本語 |
+| `pl_pl` | Polski | `ko_kr` | 한국어 |
+
+Regional variants fall back to the closest file: `es_mx`, `es_ar` → `es_es`, `pt_pt` → `pt_br`, `fr_ca` → `fr_fr`, `zh_hk` → `zh_tw`, and so on.
+Commands are always `/colosseum ...` (plus the Portuguese `/coliseu ...` aliases).
+
+To add a language or change some phrases, create `config/colosseum_lang/<code>.json` with the keys you want
+(copy them from `coliseumod_lang/en_us.json` inside the jar). Missing keys fall back to the built-in text, then to English.
+Translations were machine-assisted; corrections from native speakers are very welcome via GitHub issues or pull requests.
 
 ## How a tournament works
 

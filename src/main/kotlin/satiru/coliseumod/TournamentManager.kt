@@ -229,7 +229,7 @@ class TournamentManager(private val config: ColiseuConfig) {
     }
 
     /**
-     * Relê coliseu.json, coliseu_loot.json e o idioma.
+     * Relê colosseum.json, colosseum_loot.json e o idioma.
      * Retorna false se algum arquivo estiver com erro (nesse caso nada é alterado).
      */
     fun recarregar(): Boolean {
