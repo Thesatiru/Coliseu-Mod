@@ -42,3 +42,4 @@ replay_*.log
 libs/*.jar
 *.iml
 .idea/
+*.patch
